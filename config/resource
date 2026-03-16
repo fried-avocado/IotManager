@@ -1,0 +1,28 @@
+{
+    "data-share":
+    {
+        "shares":
+        [
+            {
+                "name": "FreePower",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "FreePower"
+                    ]
+                }
+            },
+            {
+                "name": "FreePower/data",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "FreePower"
+                    ]
+                }
+            }
+        ]
+    }
+}
