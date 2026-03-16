@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IotManager - 网络监控管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .form-group button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .form-group button:hover {
+            background-color: #2980b9;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .log-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .log-entry.success {
+            color: #28a745;
+        }
+        
+        .log-entry.error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IotManager - 网络监控管理</h1>
+        
+        <div class="section">
+            <h2>定时器设置</h2>
+            <div class="form-group">
+                <label for="interval">Ping间隔 (秒):</label>
+                <input type="number" id="interval" min="1" max="3600" value="30">
+            </div>
+            <div class="form-group">
+                <label for="gateway">网关地址:</label>
+                <input type="text" id="gateway" value="192.168.1.1">
+            </div>
+            <div class="form-group">
+                <button onclick="saveSettings()">保存设置</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>网络状态</h2>
+            <div id="status" class="status">
+                加载中...
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>ping日志</h2>
+            <div id="log-container" class="log-container">
+                加载中...
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 页面加载时获取当前设置和状态
+        window.onload = function() {
+            fetchSettings();
+            fetchStatus();
+            fetchLogs();
+        };
+        
+        // 获取当前设置
+        function fetchSettings() {
+            fetch('/api/settings')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.interval) {
+                        document.getElementById('interval').value = data.interval;
+                    }
+                    if (data.gateway) {
+                        document.getElementById('gateway').value = data.gateway;
+                    }
+                })
+                .catch(error => {
+                    console.error('获取设置失败:', error);
+                });
+        }
+        
+        // 获取网络状态
+        function fetchStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById('status');
+                    if (data.connected) {
+                        statusDiv.className = 'status success';
+                        statusDiv.innerHTML = `✅ 网络连接正常<br>网关: ${data.gateway}<br>响应时间: ${data.responseTime}ms`;
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.innerHTML = `❌ 网络连接失败<br>网关: ${data.gateway}<br>错误: ${data.error}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('获取状态失败:', error);
+                });
+        }
+        
+        // 获取ping日志
+        function fetchLogs() {
+            fetch('/api/logs')
+                .then(response => response.text())
+                .then(data => {
+                    const logContainer = document.getElementById('log-container');
+                    const lines = data.split('\n');
+                    let html = '';
+                    
+                    lines.forEach(line => {
+                        if (line.trim() !== '') {
+                            let className = '';
+                            if (line.includes('✅')) {
+                                className = 'log-entry success';
+                            } else if (line.includes('❌')) {
+                                className = 'log-entry error';
+                            } else {
+                                className = 'log-entry';
+                            }
+                            html += `<div class="${className}">${line}</div>`;
+                        }
+                    });
+                    
+                    logContainer.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('获取日志失败:', error);
+                });
+        }
+        
+        // 保存设置
+        function saveSettings() {
+            const interval = document.getElementById('interval').value;
+            const gateway = document.getElementById('gateway').value;
+            
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ interval: parseInt(interval), gateway })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('设置保存成功！');
+                    fetchStatus();
+                } else {
+                    alert('设置保存失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('保存设置失败:', error);
+                alert('保存设置失败');
+            });
+        }
+        
+        // 定期刷新状态和日志
+        setInterval(() => {
+            fetchStatus();
+            fetchLogs();
+        }, 5000);
+    </script>
+</body>
+</html>
